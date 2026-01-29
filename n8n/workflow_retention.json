@@ -1,0 +1,151 @@
+{
+  "name": "Retention Actions",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "retention-trigger",
+        "responseMode": "onReceived"
+      },
+      "name": "At Risk Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "rules": {
+          "rules": [
+            {
+              "value1": "={{$json[\"risk_level\"]}}",
+              "operation": "equal",
+              "value2": "high"
+            }
+          ]
+        }
+      },
+      "name": "IF High",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [420, 220]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "rules": {
+          "rules": [
+            {
+              "value1": "={{$json[\"risk_level\"]}}",
+              "operation": "equal",
+              "value2": "medium"
+            }
+          ]
+        }
+      },
+      "name": "IF Medium",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [420, 380]
+    },
+    {
+      "parameters": {
+        "toEmail": "={{$json.email}}",
+        "subject": "We want you back",
+        "text": "={{'Hi ' + $json.user_id + ', here is a personal offer to help you succeed.'}}"
+      },
+      "name": "Send Retention Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [650, 140]
+    },
+    {
+      "parameters": {
+        "resource": "task",
+        "operation": "create",
+        "projectId": "YOUR_PROJECT",
+        "name": "={{'Follow up with ' + $json.user_id}}"
+      },
+      "name": "Create Follow-up Task",
+      "type": "n8n-nodes-base.todoist",
+      "typeVersion": 1,
+      "position": [650, 240]
+    },
+    {
+      "parameters": {
+        "toEmail": "={{$json.email}}",
+        "subject": "Quick tip to get more value",
+        "text": "={{'Here\\'s a tip to help you get more from the product.'}}"
+      },
+      "name": "Send Tip Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [650, 380]
+    },
+    {
+      "parameters": {
+        "message": "={{'Low risk user logged: ' + $json.user_id}}"
+      },
+      "name": "Log Low Risk",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [650, 520]
+    }
+  ],
+  "connections": {
+    "At Risk Webhook": {
+      "main": [
+        [
+          {
+            "node": "IF High",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF Medium",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF High": {
+      "main": [
+        [
+          {
+            "node": "Send Retention Email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Follow-up Task",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "IF Medium": {
+      "main": [
+        [
+          {
+            "node": "Send Tip Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Low Risk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "1"
+}

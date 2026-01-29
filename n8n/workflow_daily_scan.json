@@ -1,0 +1,319 @@
+{
+  "name": "Daily Churn Scan",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hour": 9
+            }
+          ]
+        }
+      },
+      "name": "Cron",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        -976,
+        -128
+      ],
+      "id": "3a89e44c-edf4-4c6d-84b5-8f41ff022178"
+    },
+    {
+      "parameters": {
+        "filePath": "/home/node/.n8n-files/churn_dataset.csv"
+      },
+      "name": "Read CSV",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        -752,
+        -128
+      ],
+      "id": "45dd49e5-30c3-4516-854f-b2c60ed0a1c2"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "fileFormat": "csv",
+        "options": {
+          "headerRow": true
+        },
+        "binaryPropertyName": "data"
+      },
+      "name": "CSV to JSON",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 1,
+      "position": [
+        -544,
+        -128
+      ],
+      "id": "8e002dcf-e776-4c33-9779-fc29040b2868"
+    },
+    {
+      "parameters": {
+        "functionCode": "const items = $input.all().map(i => i.json);\nreturn [{ json: { payload: items } }];"
+      },
+      "name": "Make Batch Payload",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -432,
+        -128
+      ],
+      "id": "b8d7f35c-7d74-4a6d-9d5a-6c4c6a3b0fd1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.1.31:8000/batch_predict",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={{JSON.stringify($json)}}",
+        "options": {
+          "bodyContentType": "json"
+        }
+      },
+      "name": "Batch Predict",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -320,
+        -128
+      ],
+      "id": "214a3f8b-9555-48a2-953b-f718ca52c11f"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "Split Results",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        -96,
+        -128
+      ],
+      "id": "91562f58-90a1-4c88-a46c-f2873b060e54"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"risk_level\"]}}",
+              "value2": "high",
+              "operation": "equal"
+            }
+          ]
+        }
+      },
+      "name": "IF High Risk",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        112,
+        -128
+      ],
+      "id": "debbfc52-9b8b-4597-868a-a45ac78c6c9c"
+    },
+    {
+      "parameters": {
+        "webhookUri": "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN",
+        "text": "={{'High churn risk: ' + $json.user_id + ' (' + $json.churn_probability + ')'}}",
+        "options": {}
+      },
+      "name": "Discord Alert",
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 1,
+      "position": [
+        304,
+        -224
+      ],
+      "id": "7bac746e-35d0-4bbc-8434-05ab777cd0f4"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_SHEET_NAME",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "name": "Google Sheets Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        304,
+        -128
+      ],
+      "id": "30ede3eb-5cb8-4638-88d5-5614e2e835d2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/tag_user",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "name": "Tag User",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        304,
+        -32
+      ],
+      "id": "fa8a3076-87ea-431f-9574-817070a7db3a"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Cron": {
+      "main": [
+        [
+          {
+            "node": "Read CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read CSV": {
+      "main": [
+        [
+          {
+            "node": "CSV to JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CSV to JSON": {
+      "main": [
+        [
+          {
+            "node": "Make Batch Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Make Batch Payload": {
+      "main": [
+        [
+          {
+            "node": "Batch Predict",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Predict": {
+      "main": [
+        [
+          {
+            "node": "Split Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Results": {
+      "main": [
+        [
+          {
+            "node": "IF High Risk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF High Risk": {
+      "main": [
+        [
+          {
+            "node": "Discord Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google Sheets Row",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Tag User",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Sheets Row",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Tag User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag User": {
+      "main": [
+        [
+          {
+            "node": "Split Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "9abde293-97bd-49f5-8354-c99bf75d6e06",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "VmxDY5sC_GaVlsXy1GxNI",
+  "tags": []
+}

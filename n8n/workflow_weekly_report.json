@@ -1,0 +1,138 @@
+{
+  "name": "Weekly Churn Intelligence Report",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyWeek",
+              "hour": 9
+            }
+          ]
+        }
+      },
+      "name": "Weekly Cron",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        80
+      ],
+      "id": "3bbc5787-44a7-47c5-8e11-81307473fa9b"
+    },
+    {
+      "parameters": {
+        "url": "http://192.168.1.31:8000/predictions?range=7d",
+        "options": {}
+      },
+      "name": "Fetch Predictions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -448,
+        80
+      ],
+      "id": "680b1a55-342c-4581-b5cc-976f165b134c"
+    },
+    {
+      "parameters": {
+        "functionCode": "const items = $input.all();\nconst total = items.length;\nconst high = items.filter(i => i.json.risk_level === 'high').length;\nconst medium = items.filter(i => i.json.risk_level === 'medium').length;\nconst churnPredicted = ((high + medium) / Math.max(total, 1)) * 100;\nreturn [{ json: { total, high, medium, churnPredicted: churnPredicted.toFixed(1) } }];"
+      },
+      "name": "Summarize",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        80
+      ],
+      "id": "28299e72-751e-4084-b696-f8c691307c35"
+    },
+    {
+      "parameters": {
+        "fromEmail": "you@example.com",
+        "toEmail": "you@example.com",
+        "ccEmail": "you@example.com",
+        "bccEmail": "you@example.com",
+        "subject": "Weekly Churn Intelligence Report",
+        "text": "={{'Total scanned: ' + $json.total + '\nHigh risk: ' + $json.high + '\nMedium risk: ' + $json.medium + '\nChurn predicted %: ' + $json.churnPredicted}}",
+        "options": {}
+      },
+      "name": "Send Report Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "9f81802d-b678-4d4a-8bcb-9526d432a4a6"
+    },
+    {
+      "parameters": {
+        "webhookUri": "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN",
+        "text": "={{'Weekly churn report: total=' + $json.total + ', high=' + $json.high + ', medium=' + $json.medium + ', churn%=' + $json.churnPredicted}}",
+        "options": {}
+      },
+      "name": "Discord Report",
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 1,
+      "position": [
+        0,
+        160
+      ],
+      "id": "451fdd19-0e32-44fa-9278-e735f546dd44"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Weekly Cron": {
+      "main": [
+        [
+          {
+            "node": "Fetch Predictions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Predictions": {
+      "main": [
+        [
+          {
+            "node": "Summarize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize": {
+      "main": [
+        [
+          {
+            "node": "Send Report Email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Discord Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "00259129-65d1-49dd-917a-6efd0027ab60",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "2v-HCpRzpycHJtovNcYY3",
+  "tags": []
+}
