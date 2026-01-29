@@ -1,6 +1,6 @@
 # User Churn Early Warning System
 
-A production-style but portfolio-friendly system that predicts churn using the public Telco Customer Churn dataset (OpenML 42178). The system includes a dataset downloader, a TensorFlow/Keras model, a FastAPI inference server, and n8n automations to trigger retention actions.
+A production-style system that predicts churn using the public Telco Customer Churn dataset (OpenML 42178). The system includes a dataset downloader, a TensorFlow/Keras model, a FastAPI inference server, and n8n automations to trigger retention actions.
 
 This repo is sanitized for public GitHub use: all webhook URLs, email addresses, and credential IDs in workflow JSON files are replaced with placeholders.
 
